@@ -6,6 +6,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import { prismaClient } from '../clients/db';
 import { User } from './user';
+import {Tweet} from './tweet';
 import { graphqlContext } from '../interfaces';
 import JWTService from '../services/jwt';
 
@@ -19,17 +20,29 @@ export async function initServer() {
   const graphqlServer = new ApolloServer<graphqlContext>({
     typeDefs : `
     ${User.types}
+    ${Tweet.types}
 
       type Query {
           ${User.queries}
+          ${Tweet.queries}
+      }
+      type Mutation {
+        ${Tweet.mutations}
       }
     `,
 
     resolvers : {
       Query: {
         ...User.resolvers.queries,
+        ...Tweet.resolvers.queries,
+        
       },
-      // Mutation: {},
+      Mutation: {
+        ...Tweet.resolvers.mutations,
+        
+      },
+        ...Tweet.resolvers.extraResolvers,
+        ...User.resolvers.extraResolvers,
     },
     
   });
@@ -38,14 +51,22 @@ export async function initServer() {
 
   app.use('/graphql',expressMiddleware(graphqlServer, {context:
     async ({req, res}) => {
-      return {
-        user : req.headers.authorization? JWTService.decodeToken(req.headers.authorization.split("Bearer ")[1]): undefined,
-        
-      }
+      
+      const context = {
+        user: req.headers.authorization ? JWTService.decodeToken(req.headers.authorization.split("Bearer ")[1]) : undefined,
+      };
+  
+      // console.log("Context in index:", context); // Log the context
+  
+      return context;
+    
+    
+      
     }
   }));
 
-
+  
+  
   return app;  
 
 }

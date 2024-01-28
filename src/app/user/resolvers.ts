@@ -2,6 +2,7 @@ import axios from "axios";
 import { prismaClient } from "../../clients/db";
 import JWTService from "../../services/jwt";
 import { graphqlContext } from "../../interfaces";
+import { User } from "@prisma/client";
 
 
 interface GoogleTokenResult {
@@ -62,13 +63,18 @@ const queries = {
 
   },
 
-  getCurrentUser:async (parent:any, argsa:any, ctx: graphqlContext) => {
-    
-    const id = ctx.user?.id;
+  getCurrentUser:async (parent:any, args:any, contextValue: graphqlContext) => {
+    const id = contextValue.user?.id;
     if (!id) return null;
     const user = await prismaClient.user.findUnique({where: { id }});
     return user;
   },
 };
 
-export const resolvers = { queries };
+const extraResolvers = {
+  User: {
+    tweets: (parent:User) => prismaClient.tweet.findMany({where: {author : {id : parent.id}}})
+  }
+}
+
+export const resolvers = { queries, extraResolvers };
